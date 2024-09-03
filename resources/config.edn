@@ -1,0 +1,85 @@
+;; See https://github.com/juxt/aero and https://biffweb.com/docs/api/utilities/#use-aero-config.
+;; #biff/env and #biff/secret will load values from the environment and from config.env.
+{:biff/base-url #profile {:prod #join ["https://" #biff/env DOMAIN]
+                          :default #join ["http://localhost:" #ref [:biff/port]]}
+ :biff/host     #or [#biff/env "HOST"
+                     #profile {:dev "0.0.0.0"
+                               :default "localhost"}]
+ :biff/port     #long #or [#biff/env "PORT" 8080]
+
+ :biff.xtdb/dir          "storage/xtdb"
+ :biff.xtdb/topology     #keyword #or [#profile {:prod #biff/env "PROD_XTDB_TOPOLOGY"
+                                                 :default #biff/env "XTDB_TOPOLOGY"}
+                                       "standalone"]
+ :biff.xtdb.jdbc/jdbcUrl #biff/secret "XTDB_JDBC_URL"
+
+ :biff.beholder/enabled         #profile {:dev true :default false}
+ :biff.beholder/paths           ["src" "resources" "test"]
+ :biff/eval-paths               ["src" "test"]
+ :biff.middleware/secure        #profile {:dev false :default true}
+ :biff.middleware/cookie-secret #biff/secret COOKIE_SECRET
+ :biff/jwt-secret               #biff/secret JWT_SECRET
+ :biff.refresh/enabled          #profile {:dev true :default false}
+
+ :mailersend/api-key  #biff/secret MAILERSEND_API_KEY
+ :mailersend/from     #biff/env MAILERSEND_FROM
+ :mailersend/reply-to #biff/env MAILERSEND_REPLY_TO
+
+ :recaptcha/secret-key #biff/secret RECAPTCHA_SECRET_KEY
+ :recaptcha/site-key   #biff/env RECAPTCHA_SITE_KEY
+
+ :biff.nrepl/port #or [#biff/env NREPL_PORT "7888"]
+ :biff.nrepl/args ["--port" #ref [:biff.nrepl/port]
+                   "--middleware" "[cider.nrepl/cider-middleware,refactor-nrepl.middleware/wrap-refactor]"]
+
+ :biff.system-properties/user.timezone                 "UTC"
+ :biff.system-properties/clojure.tools.logging.factory "clojure.tools.logging.impl/slf4j-factory"
+
+ :biff.tasks/server                 #biff/env DOMAIN
+ :biff.tasks/main-ns                happyapi.temporal
+ :biff.tasks/on-soft-deploy         "\"(happyapi.temporal/on-save @happyapi.temporal/system)\""
+ :biff.tasks/generate-assets-fn     happyapi.temporal/generate-assets!
+ :biff.tasks/css-output             "target/resources/public/css/main.css"
+ :biff.tasks/deploy-untracked-files [#ref [:biff.tasks/css-output]
+                                     "config.env"]
+ ;; `clj -M:dev prod-dev` will run the soft-deploy task whenever files in these directories are changed.
+ :biff.tasks/watch-dirs             ["src" "dev" "resources" "test"]
+
+ ;; Uncomment this line if you're on Windows/don't have rsync and your local branch is
+ ;; called main instead of master:
+ ;; :biff.tasks/deploy-cmd ["git" "push" "prod" "main:master"]
+ :biff.tasks/deploy-cmd ["git" "push" "prod" "master"]
+ ;; Uncomment this line if you have any ssh-related problems:
+ ;; :biff.tasks/skip-ssh-agent true
+
+ ;; HappyAPI
+
+ :happyapi/config
+ {:google {:deps            [:clj-http :cheshire]
+           ;; At present, the library requires a run-server fn even though we don't want it to run a server
+           :client_id       #biff/env HAPPYAPI_GOOGLE_CLIENT_ID
+           :client_secret   #biff/env HAPPYAPI_GOOGLE_SECRET
+           :redirect_uri    "http://localhost:8080/redirect"
+           :scopes          []
+           :keywordize-keys true}}
+
+ ;; ------------ Temporal ------------------
+
+  :temporal/target #or [#profile {:prod #biff/env "TEMPORAL_PROD_TARGET"
+                                  :default #biff/env "TEMPORAL_TARGET"}
+                       "localhost:7233"]
+
+ :temporal/namespace #or [#profile {:prod #biff/env "TEMPORAL_PROD_NAMESPACE"
+                                    :default #biff/env "TEMPORAL_NAMESPACE"}
+                          "default"]
+ :temporal/enable-https #profile {:prod true :default false}
+ :temporal/cert-path #or [#biff/env TEMPORAL_CLIENT_CERT_PATH "client.pem"]
+ :temporal/key-path #or [#biff/env TEMPORAL_CLIENT_KEY "client.key"]
+
+ :temporal/workflow-options #profile
+ {:dev {:task-queue                  :unifica.workflows/queue
+        :retry-options               {:maximum-attempts 1}
+        :workflow-execution-timeout  #unifica/duration [1 :minutes]}}
+
+
+ }

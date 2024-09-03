@@ -1,0 +1,6 @@
+;; Biff transaction. See https://biffweb.com/docs/reference/transactions/
+[{:db/doc-type :user
+  :xt/id :db.id/kyle
+  :user/email "kyle@unifica.ai"
+  :user/joined-at :db/now}
+ ]
