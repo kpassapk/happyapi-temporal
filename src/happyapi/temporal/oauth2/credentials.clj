@@ -23,9 +23,17 @@
       (dissoc :xt/id)
       un-ns-keys))
 
-(defn save [ctx provider user credentials]
-  (when credentials
+(defn save [ctx provider request-id credentials]
+  (let [keys [:provider
+              :user
+              :access_token
+              :refresh_token
+              :scope
+              :token_type
+              :expires_at]]
     (biff/submit-tx ctx [(-> credentials
-                             (assoc :user user)
+                             (select-keys keys)
+                             (assoc :request request-id
+                                    :created_at :db/now)
                              (ns-keys "auth")
                              (assoc :db/doc-type :auth))])))

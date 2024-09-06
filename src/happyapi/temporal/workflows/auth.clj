@@ -4,6 +4,7 @@
    [com.biffweb :as biff]
    [happyapi.oauth2.auth :as oauth2]
    [happyapi.temporal.utils :as utils]
+   [happyapi.temporal.oauth2.credentials :as credentials]
    [temporal.activity :refer [defactivity] :as a]
    [temporal.client.core :as tc]
    [temporal.signals :refer [<! >!] :as sig]
@@ -15,9 +16,9 @@
   {::create
    ;; Create an auth
    [:map {:closed true}
-    [:user :user/id]
+    [:user     :user/id]
     [:provider :keyword]
-    [:scopes [:vector :string]]]
+    [:scopes   [:vector :string]]]
 
    ::finish
    ;; Finish an auth
@@ -25,7 +26,7 @@
     [:code :string]
     [:state :string]]})
 
-;; Get login link
+;; Get a provider login link
 (defactivity get-link [{:keys [happyapi/config] :as ctx}
 
                        {:keys [provider scopes state-and-challenge] :as args}]
@@ -37,7 +38,6 @@
                 code_challenge_method]} config
 
         scopes (->> (concat default-scopes scopes) (into []))
-
         optional (merge authorization_options
                         {:state state-and-challenge}
                         (when code_challenge_method
@@ -45,7 +45,7 @@
 
     {:login-url (oauth2/provider-login-url config scopes optional)}))
 
-;; Exchenge an authenticaiton code for a token
+;; Exchange an authenticaiton code for a token
 (defactivity exchange-code
   [{:keys [happyapi/config] :as ctx}
 
@@ -71,34 +71,37 @@
                :expected state-and-challenge
                ::te/non-retriable? true}))))
 
-(defn- auth-state
+(defactivity persist-auth
+  [{:temporal.activity/keys [get-info] :as ctx} {:keys [provider] :as args}]
+  (let [ctx (biff/assoc-db ctx)
+        {request-id :workflow-id} (get-info)
+        request-id (parse-uuid request-id)]
+    (credentials/save ctx provider request-id args)))
+
+(defn- auth->state
   "Converts an auth request ID to an OAuth2 state string"
   [request-id]
   (str request-id))
 
-(defn- request-id
+(defn- state->request-id
   "Converts an OAuth2 state string to a request ID"
   [auth-state] auth-state)
 
 ;; Creates a new authentication
 (defworkflow authentication [wf-args]
   (let [{id :workflow-id} (w/get-info)
-
-        wf-args (assoc wf-args :state-and-challenge (auth-state id))
-
-        state (atom wf-args)
-
-        signals {:start    get-link
-                 :callback exchange-code}]
+        wf-args           (assoc wf-args :state-and-challenge (auth->state id))
+        state             (atom wf-args)
+        signals           {:start    get-link
+                           :callback exchange-code}]
 
     (sig/register-signal-handler!
      (fn [signal-name {:keys [workflow-id] :as args}]
        (let [args     (merge args @state)
              activity (get signals (keyword signal-name))
-
-             result (when activity
-                      (doto @(a/invoke activity args)
-                        (#(>! workflow-id :result %))))]
+             result   (when activity
+                        (doto @(a/invoke activity args)
+                          (#(>! workflow-id :result %))))]
 
          (swap! state merge result))))
 
@@ -109,8 +112,8 @@
      (fn []
        (some? (:access_token @state))))
 
-    ;; TODO Create auth in database
-    ;; @(a/invoke create-auth (merge {:id id} @state))
+    @(a/invoke persist-auth @state)
+
     @state))
 
 (defworkflow auth-start
@@ -129,45 +132,44 @@
                                      :state state})
     (<! signals           :result)))
 
+(defn load [{:keys [biff/db]} {:keys [user provider]}]
+  (biff/lookup db
+               :auth/user user
+               :auth/provider provider))
+
 ;; Creates an authentication for a user ID, provider ID, provider name (:google etc) and a list of scopes
 (defn create [ctx {:keys [user provider scopes] :as params}]
   (let [request-id (random-uuid)
-        request #:auth-request{:user     user
-                               :provider provider
-                               :scopes   scopes}
+        request    #:auth-request{:user     user
+                                  :provider provider
+                                  :scopes   scopes}
         request (assoc request
                        :db/doc-type :auth-request
                        :xt/id       request-id)
 
         main   (delay (utils/trigger ctx authentication {:id request-id :params params}))
-
-        start  (delay (utils/trigger ctx auth-start {:params {:workflow-id request-id}}))
-
-        result (delay (merge {:install/request request-id}
-                             @(tc/get-result @start)))]
+        start  (delay (utils/trigger ctx auth-start {:params {:workflow-id request-id}}))]
 
     (if (utils/valid? ctx ::create params)
       (do
         ;; Persist request, then fire off main
         (biff/submit-tx ctx [request])
         @main
-        @result)
+        @(tc/get-result @start))
       {:error ::invalid-params
        :cause (utils/explain ctx ::create params)})))
 
-;; Finish an auth request.
+;; Finish an auth request
 (defn finish [ctx {:keys [code state] :as params}]
-  (let [;; state
-        request  (request-id state)
+  (let [request  (state->request-id state)
         main     (delay (utils/trigger ctx authentication {:id request :signal ::->finish}))
         callback (delay (utils/trigger ctx auth-callback {:params {:workflow-id request
                                                                    :code code
-                                                                   :state state}}))
-        result (delay @(tc/get-result @callback))]
+                                                                   :state state}}))]
     (if (utils/valid? ctx ::finish params)
       (do
         @main
-        @result)
+        @(tc/get-result @callback))
       (throw+ {:type ::invalid-params
                :explain (utils/explain ctx ::finish params)}))))
 

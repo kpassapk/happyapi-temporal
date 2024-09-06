@@ -4,6 +4,7 @@
    [clojure.tools.logging :as log]
    [clojure.tools.namespace.repl :as tn-repl]
    [com.biffweb :as biff]
+   [happyapi.temporal.config :as config]
    [happyapi.temporal.home :as home]
    [happyapi.temporal.middleware :as mid]
    [happyapi.temporal.schema :as schema]
@@ -49,14 +50,20 @@
               malc/default-registry
               (apply biff/safe-merge (keep :schema modules)))})
 
-(defn use-happyapi [{:keys [happyapi/config] :as ctx}]
+;; Load happyapi config
+(defn use-happyapi-config
+  "Expand happyapi configuration"
+  [{:keys [happyapi/config] :as ctx}]
   (let [expand (fn [provider cfg]
                  [provider (-> cfg
                                (update :provider #(or % provider))
                                happyapi/with-deps
                                happyapi/resolve-fns
                                oauth2/with-endpoints)])
-        provider-cofigs (->> (for [provider-config config] (apply expand provider-config))
+        provider-cofigs (->> (for [provider-config config]
+                               (->> provider-config
+                                   (apply expand)
+                                   (apply config/verify-happyapi-config)))
                              (into {}))]
     (assoc ctx :happyapi/config provider-cofigs)))
 
@@ -77,7 +84,7 @@
 (def components
   [biff/use-aero-config
    biff/use-xtdb
-   use-happyapi
+   use-happyapi-config
    biff/use-xtdb-tx-listener
    biff/use-htmx-refresh
    (temporal/use-temporal {:worker-options worker-options})

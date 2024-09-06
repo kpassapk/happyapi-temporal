@@ -2,7 +2,9 @@
   (:require [com.biffweb :as biff]
             [muuntaja.middleware :as muuntaja]
             [ring.middleware.anti-forgery :as csrf]
-            [ring.middleware.defaults :as rd]))
+            [ring.middleware.defaults :as rd]
+            [happyapi.temporal.client :as happyapi]
+            [happyapi.providers.google :as google]))
 
 (defn wrap-redirect-signed-in [handler]
   (fn [{:keys [session] :as ctx}]
@@ -58,3 +60,9 @@
       biff/wrap-internal-error
       biff/wrap-ssl
       biff/wrap-log-requests))
+
+(defn wrap-happyapi-request [handler]
+  (fn [ctx]
+    (let [client (happyapi/make-client ctx :google)]
+      (with-redefs [google/*api-request* client]
+        (handler ctx)))))

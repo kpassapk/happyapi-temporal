@@ -3,7 +3,11 @@
             [com.biffweb :as biff :refer [q]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [happyapi.temporal.workflows.auth :as auth]))
+            [happyapi.temporal.workflows.auth :as auth]
+            [happyapi.temporal.client :as client]
+            [happyapi.temporal.sheets-v4 :as sheets-v4]
+            [happyapi.temporal.middleware :as mid]
+            [happyapi.temporal.sheets-v4 :as sheets]))
 
 ;; REPL-driven development
 ;; ----------------------------------------------------------------------------------------
@@ -59,7 +63,18 @@
   ;; main/components, :tasks, :queues, config.env, or deps.edn.
   (main/refresh)
 
-  (:happyapi/config (main/use-happyapi (biff/use-aero-config {})))
+  (let [spreadsheet-id "1vI2MXnZXTxOM-TEEmzIFx3z-ulz8wGZyO5Simj2vxHM"
+        req (mid/wrap-happyapi-request (fn [_] (sheets/spreadsheets-get spreadsheet-id)))]
+    (req (get-context)))
+
+  (:happyapi/config (main/use-happyapi-config (biff/use-aero-config {})))
+
+  ;; Get all auths for user
+  (let [{:keys [biff/db]} (get-context)]
+    (biff/lookup db '[:xt/id {:auth/_user [:auth/access_token]}] :xt/id #uuid "3e788b71-3e85-4327-a81d-012f358303c4"))
+
+  (->> (let [{:keys [biff/db]} (get-context)]
+        (biff/lookup-all db '[:xt/id :auth/access_token] :auth/user #uuid "3e788b71-3e85-4327-a81d-012f358303c4")))
 
   ;; Call this in dev if you'd like to add some seed data to your database. If
   ;; you edit the seed data (in resources/fixtures.edn), you can reset the
@@ -92,5 +107,27 @@
                                          "https://www.googleapis.com/auth/drive.readonly"
                                          "https://www.googleapis.com/auth/spreadsheets"
                                          "https://www.googleapis.com/auth/spreadsheets.readonly"]}))
+
+  (def state
+    {:scopes ["https://www.googleapis.com/auth/drive"
+              "https://www.googleapis.com/auth/drive.file"
+              "https://www.googleapis.com/auth/drive.readonly"
+              "https://www.googleapis.com/auth/spreadsheets"
+              "https://www.googleapis.com/auth/spreadsheets.readonly"]
+
+     :created_at #inst "2024-09-05T02:24:41.765-00:00",
+     :expires_at #inst "2024-09-05T02:24:41.765-00:00",
+     :access_token "token",
+     :refresh_token "refresh",
+     :scope "https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file",
+     :token_type "Bearer",
+     :state-and-challenge "3ab0a819-5502-4e3f-b1aa-9a5ff5da6548",
+     :expires_in 3599,
+     :provider :google,
+     :user #uuid "3e788b71-3e85-4327-a81d-012f358303c4",
+     :login-url "url"})
+
+  (let [ctx (assoc (get-context) :temporal.activity/get-info (constantly {:workflow-id "38587950-f771-45e2-abaf-e758446fde2d"}))]
+    (auth/persist-auth ctx state))
 
   )

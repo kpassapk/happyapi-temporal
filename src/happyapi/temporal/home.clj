@@ -4,21 +4,20 @@
    [com.biffweb :as biff]
    [happyapi.temporal.middleware :as mid]
    [happyapi.temporal.ui :as ui]
-   [happyapi.temporal.workflows.auth :as auth]))
+   [happyapi.temporal.workflows.auth :as auth]
+   [happyapi.temporal.sheets-v4 :as sheets]))
 
-(def scopes ["https://www.googleapis.com/auth/drive"
-             "https://www.googleapis.com/auth/drive.file"
-             "https://www.googleapis.com/auth/drive.readonly"
-             "https://www.googleapis.com/auth/spreadsheets"
-             "https://www.googleapis.com/auth/spreadsheets.readonly"])
-
-(defn home-page [ctx]
-  (ui/page
-   ctx
-   [:h1 "Welcome to your app!"]
-   [:.h-4]
-   [:.flex
-    [:a.link {:href "/start"} "Start authentication"]]))
+(defn home-page [{:keys [biff/db] :as ctx}]
+  (let [user (biff/lookup-id db :user/email "kyle@unifica.ai")
+        auth (auth/load ctx {:user user :provider :google})]
+    (ui/page
+     ctx
+     [:h1 "Welcome to your app!"]
+     [:.h-4]
+     [:.flex
+      (if auth
+        [:a.link {:href "/spreadsheet"} "Show spreadsheet"]
+        [:a.link {:href "/start"} "Start authentication"])])))
 
 (defn start-auth [{:keys [biff/db] :as ctx}]
   (let [user (biff/lookup-id db :user/email "kyle@unifica.ai") ;; TODO replace with session
@@ -48,24 +47,13 @@
   {:status 303
    :headers {"location" "/"}})
 
-(defn spreadsheet [{:keys [happyapi/request] :as ctx}]
+(defn spreadsheet
+  "Show a single spreadsheet"
+  [_]
   (ui/page
    nil
    (let [spreadsheet-id "1vI2MXnZXTxOM-TEEmzIFx3z-ulz8wGZyO5Simj2vxHM"
-         result (request
-                 {:ctx ctx
-                  :method :get,
-                  :uri-template
-                  "https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}",
-                  :uri-template-args {"spreadsheetId" spreadsheet-id},
-                  :query-params {},
-                  :scopes
-                  ["https://www.googleapis.com/auth/drive"
-                   "https://www.googleapis.com/auth/drive.file"
-                   "https://www.googleapis.com/auth/drive.readonly"
-                   "https://www.googleapis.com/auth/spreadsheets"
-                   "https://www.googleapis.com/auth/spreadsheets.readonly"]})
-         _ (def result* result)]
+         result (sheets/spreadsheets-get spreadsheet-id)]
      [:h1 "Welcome to your app!"]
      [:pre
       (json/generate-string result {:pretty true})])))
@@ -74,4 +62,6 @@
   {:routes [["" {:middleware [mid/wrap-redirect-signed-in]}
              ["/" {:get home-page}]
              ["/start" {:get start-auth}]
-             ["/redirect" {:get finish-auth}]]]})
+             ["/redirect" {:get finish-auth}]
+             ["/spreadsheet" {:get {:middleware [mid/wrap-happyapi-request]
+                                    :handler spreadsheet}}]]]})
