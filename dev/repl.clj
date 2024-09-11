@@ -1,13 +1,12 @@
 (ns repl
-  (:require [happyapi.temporal :as main]
-            [com.biffweb :as biff :refer [q]]
-            [clojure.edn :as edn]
-            [clojure.java.io :as io]
-            [happyapi.temporal.workflows.auth :as auth]
-            [happyapi.temporal.client :as client]
-            [happyapi.temporal.sheets-v4 :as sheets-v4]
-            [happyapi.temporal.middleware :as mid]
-            [happyapi.temporal.sheets-v4 :as sheets]))
+  (:require
+   [clojure.edn :as edn]
+   [clojure.java.io :as io]
+   [com.biffweb :as biff :refer [q]]
+   [happyapi.temporal :as main]
+   [happyapi.temporal.middleware :as mid]
+   [happyapi.temporal.sheets-v4 :as sheets]
+   [happyapi.temporal.workflows.auth :as auth]))
 
 ;; REPL-driven development
 ;; ----------------------------------------------------------------------------------------
@@ -69,9 +68,13 @@
 
   (:happyapi/config (main/use-happyapi-config (biff/use-aero-config {})))
 
+  (let [{:keys [biff/db] :as ctx} (get-context)
+        user (biff/lookup db :user/email "kyle@unifica.ai" )]
+    (auth/load ctx {:user (:xt/id user) :provider :google }))
+  
   ;; Get all auths for user
   (let [{:keys [biff/db]} (get-context)]
-    (biff/lookup db '[:xt/id {:auth/_user [:auth/access_token]}] :xt/id #uuid "3e788b71-3e85-4327-a81d-012f358303c4"))
+    (biff/lookup db '[:xt/id {:auth/_user [:auth/provider :auth/access_token]}] :user/email "kyle@unifica.ai"))
 
   (->> (let [{:keys [biff/db]} (get-context)]
         (biff/lookup-all db '[:xt/id :auth/access_token] :auth/user #uuid "3e788b71-3e85-4327-a81d-012f358303c4")))
@@ -96,6 +99,17 @@
         :xt/id user-id
         :db/op :update
         :user/email "new.address@example.com"}]))
+
+  (let [{:keys [biff/db]} (get-context)
+        user (biff/lookup-id db :user/email "kyle@unifica.ai")
+        scopes ["https://www.googleapis.com/auth/drive"
+                "https://www.googleapis.com/auth/drive.file"
+                "https://www.googleapis.com/auth/drive.readonly"
+                "https://www.googleapis.com/auth/spreadsheets"
+                "https://www.googleapis.com/auth/spreadsheets.readonly"]]
+    (auth/create (get-context) {:user user
+                                 :provider :google
+                                 :scopes scopes}))
 
   (sort (keys (get-context)))
 

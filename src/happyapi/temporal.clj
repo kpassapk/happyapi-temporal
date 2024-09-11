@@ -67,6 +67,9 @@
                              (into {}))]
     (assoc ctx :happyapi/config provider-cofigs)))
 
+(defn- get-user-fn [{:keys [session]}]
+  (:uid session))
+
 (def initial-system
   {:biff/modules #'modules
    :biff/handler #'handler
@@ -74,6 +77,7 @@
    :biff.beholder/on-save #'on-save
    :biff.middleware/on-error #'ui/on-error
    :biff.xtdb/tx-fns biff/tx-fns
+   :app/get-user-fn #'get-user-fn
    :temporal.activity/get-info #'a/get-info})
 
 (def worker-options

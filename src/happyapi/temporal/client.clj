@@ -18,9 +18,9 @@
     ([args respond raise]
      (request args respond raise))))
 
-(defn wrap-oauth2 [{:keys [session] :as ctx} provider request]
+(defn wrap-oauth2 [{:keys [app/get-user-fn] :as ctx} provider request]
   (fn [args]
-    (let [user (:uid session)
+    (let [user        (get-user-fn ctx)
           credentials (credentials/load ctx provider user)
           {:keys [access_token]} credentials]
       (if access_token

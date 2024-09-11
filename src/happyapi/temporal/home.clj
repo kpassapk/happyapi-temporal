@@ -7,9 +7,15 @@
    [happyapi.temporal.workflows.auth :as auth]
    [happyapi.temporal.sheets-v4 :as sheets]))
 
+(defn with-testuser [{:keys [biff/db] :as ctx} email]
+  (let [userfn (fn [_] (biff/lookup-id db :user/email email))]
+    (assoc ctx :app/get-user-fn userfn)))
+
 (defn home-page [{:keys [biff/db] :as ctx}]
   (let [user (biff/lookup-id db :user/email "kyle@unifica.ai")
-        auth (auth/load ctx {:user user :provider :google})]
+        _ (def ctx* ctx)
+        _ (def user* user)
+        auth (auth/load ctx* {:user user* :provider :google})]
     (ui/page
      ctx
      [:h1 "Welcome to your app!"]
@@ -58,10 +64,20 @@
      [:pre
       (json/generate-string result {:pretty true})])))
 
+(defn wrap-kyle [handler]
+  (fn [ctx]
+    (def handler* handler)
+    (def ctx* ctx)
+    (-> ctx*
+        (with-testuser "kyle@unifica.ai")
+        handler*)))
+
 (def module
   {:routes [["" {:middleware [mid/wrap-redirect-signed-in]}
-             ["/" {:get home-page}]
+             ["/" {:get {:handler home-page
+                         :middleware [wrap-kyle]}}]
              ["/start" {:get start-auth}]
              ["/redirect" {:get finish-auth}]
-             ["/spreadsheet" {:get {:middleware [mid/wrap-happyapi-request]
+             ["/spreadsheet" {:get {:middleware [wrap-kyle
+                                                 mid/wrap-happyapi-request]
                                     :handler spreadsheet}}]]]})

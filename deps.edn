@@ -11,10 +11,10 @@
         org.slf4j/jul-to-slf4j     {:mvn/version "1.7.36"}
         org.slf4j/jcl-over-slf4j   {:mvn/version "1.7.36"}
 
-        io.github.timothypratley/happyapi {:local/root "/Users/kyle/src/github.com/unifica-ai/happyapi"
+        io.github.timothypratley/happyapi {:local/root "/Users/kyle/src/github.com/timothypratley/happyapi"
                                            ;; :mvn/version "0.1.110-alpha"
                                            }
-
+ 
         ai.unifica/temporal {;; :git/url "git@github.com-unifica-components:unifica-ai/components.git" :git/sha "bd9b90fc297ffefcdb84e8f89065048383fe390f"
                              ;; :deps/root "temporal"
                              :local/root "/Users/kyle/src/github.com/unifica-ai/components/temporal"
