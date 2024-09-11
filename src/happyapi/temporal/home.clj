@@ -13,9 +13,7 @@
 
 (defn home-page [{:keys [biff/db] :as ctx}]
   (let [user (biff/lookup-id db :user/email "kyle@unifica.ai")
-        _ (def ctx* ctx)
-        _ (def user* user)
-        auth (auth/load ctx* {:user user* :provider :google})]
+        auth (auth/load ctx {:user user :provider :google})]
     (ui/page
      ctx
      [:h1 "Welcome to your app!"]
@@ -66,11 +64,9 @@
 
 (defn wrap-kyle [handler]
   (fn [ctx]
-    (def handler* handler)
-    (def ctx* ctx)
-    (-> ctx*
+    (-> ctx
         (with-testuser "kyle@unifica.ai")
-        handler*)))
+        handler)))
 
 (def module
   {:routes [["" {:middleware [mid/wrap-redirect-signed-in]}
