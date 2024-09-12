@@ -11,17 +11,14 @@
         org.slf4j/jul-to-slf4j     {:mvn/version "1.7.36"}
         org.slf4j/jcl-over-slf4j   {:mvn/version "1.7.36"}
 
-        io.github.timothypratley/happyapi {:local/root "/Users/kyle/src/github.com/timothypratley/happyapi"
-                                           ;; :mvn/version "0.1.110-alpha"
-                                           }
+        io.github.timothypratley/happyapi {:git/url "https://github.com/timothypratley/happyapi"
+                                           :git/sha "8ee2e88d1ad23b7222063309cf9077749e57f969"}
  
-        ai.unifica/temporal {;; :git/url "git@github.com-unifica-components:unifica-ai/components.git" :git/sha "bd9b90fc297ffefcdb84e8f89065048383fe390f"
-                             ;; :deps/root "temporal"
-                             :local/root "/Users/kyle/src/github.com/unifica-ai/components/temporal"
-                             }
+        ai.unifica/temporal {:git/url "git@github.com-unifica-components:unifica-ai/components.git"
+                             :git/sha "ddd28b1719200515a51173b00bbebff0f76c757e"
+                             :deps/root "temporal"}
 
-        clojure.java-time/clojure.java-time {:mvn/version "1.4.2"}
-        }
+        clojure.java-time/clojure.java-time {:mvn/version "1.4.2"}}
  :aliases
  {:dev {:extra-deps {com.biffweb/tasks {:git/url "https://github.com/jacobobryant/biff", :git/sha "75fd9d7", :git/tag "v1.8.20", :deps/root "libs/tasks"}
                      vvvvalvalval/scope-capture {:mvn/version "0.3.3"}}

@@ -26,6 +26,10 @@
     [:code :string]
     [:state :string]]})
 
+;; - perhaps change state-and-challenge -> state (challenge is not relevant  here)
+;; - activity -> regular function (no side effects here).
+;; - return a URL instead of a map
+
 ;; Get a provider login link
 (defactivity get-link [{:keys [happyapi/config] :as ctx}
 
@@ -159,6 +163,7 @@
       {:error ::invalid-params
        :cause (utils/explain ctx ::create params)})))
 
+;; TODO consider moving delayed code into function
 ;; Finish an auth request
 (defn finish [ctx {:keys [code state] :as params}]
   (let [request  (state->request-id state)

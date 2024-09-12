@@ -23,6 +23,8 @@
         [:a.link {:href "/spreadsheet"} "Show spreadsheet"]
         [:a.link {:href "/start"} "Start authentication"])])))
 
+;; TODO create workflow when you redirct
+;; Click button, which does the redirect for you.
 (defn start-auth [{:keys [biff/db] :as ctx}]
   (let [user (biff/lookup-id db :user/email "kyle@unifica.ai") ;; TODO replace with session
 
