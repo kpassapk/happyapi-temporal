@@ -62,6 +62,13 @@
   ;; main/components, :tasks, :queues, config.env, or deps.edn.
   (main/refresh)
 
+  ;; Get all auth requests for app user
+  (let [{:keys [biff/db app/get-user-fn] :as ctx} ((mid/wrap-kyle identity) (get-context))
+        user (get-user-fn ctx)]
+    (q db
+       '{:find (pull auth [*])
+         :where [[auth :auth-request/user]]}))
+  
   (let [spreadsheet-id "1vI2MXnZXTxOM-TEEmzIFx3z-ulz8wGZyO5Simj2vxHM"
         req (mid/wrap-happyapi-request (fn [_] (sheets/spreadsheets-get spreadsheet-id)))]
     (req (get-context)))
@@ -70,7 +77,7 @@
 
   (let [{:keys [biff/db] :as ctx} (get-context)
         user (biff/lookup db :user/email "kyle@unifica.ai" )]
-    (auth/load ctx {:user (:xt/id user) :provider :google }))
+    (auth/start ctx {:user (:xt/id user) :provider :google :scopes ["scope1"]}))
   
   ;; Get all auths for user
   (let [{:keys [biff/db]} (get-context)]
@@ -107,14 +114,14 @@
                 "https://www.googleapis.com/auth/drive.readonly"
                 "https://www.googleapis.com/auth/spreadsheets"
                 "https://www.googleapis.com/auth/spreadsheets.readonly"]]
-    (auth/create (get-context) {:user user
+    (auth/start (get-context) {:user user
                                  :provider :google
                                  :scopes scopes}))
 
   (sort (keys (get-context)))
 
   (let [{:keys [biff/db]} (get-context)]
-    (auth/create (get-context) {:user (biff/lookup-id db :user/email "kyle@unifica.ai")
+    (auth/request (get-context) {:user (biff/lookup-id db :user/email "kyle@unifica.ai")
                                 :provider :google
                                 :scopes ["https://www.googleapis.com/auth/drive"
                                          "https://www.googleapis.com/auth/drive.file"

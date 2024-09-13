@@ -5,7 +5,6 @@
    [happyapi.middleware :as middleware]))
 
 (defn verify-happyapi-config [provider {:as config {:keys [request]} :fns}]
-  (def config* config)
   (when-let [ks (oauth2.client/missing-config config)]
     (throw (ex-info (str "Invalid config: missing " (str/join "," ks))
                     {:id      ::invalid-config

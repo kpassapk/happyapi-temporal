@@ -7,13 +7,9 @@
    [happyapi.temporal.workflows.auth :as auth]
    [happyapi.temporal.sheets-v4 :as sheets]))
 
-(defn with-testuser [{:keys [biff/db] :as ctx} email]
-  (let [userfn (fn [_] (biff/lookup-id db :user/email email))]
-    (assoc ctx :app/get-user-fn userfn)))
-
-(defn home-page [{:keys [biff/db] :as ctx}]
-  (let [user (biff/lookup-id db :user/email "kyle@unifica.ai")
-        auth (auth/load ctx {:user user :provider :google})]
+(defn home-page [{:keys [biff/db app/get-user-fn] :as ctx}]
+  (let [user (get-user-fn ctx)
+        auth (biff/lookup db :auth/user user)]
     (ui/page
      ctx
      [:h1 "Welcome to your app!"]
@@ -23,8 +19,6 @@
         [:a.link {:href "/spreadsheet"} "Show spreadsheet"]
         [:a.link {:href "/start"} "Start authentication"])])))
 
-;; TODO create workflow when you redirct
-;; Click button, which does the redirect for you.
 (defn start-auth [{:keys [biff/db] :as ctx}]
   (let [user (biff/lookup-id db :user/email "kyle@unifica.ai") ;; TODO replace with session
 
@@ -34,16 +28,15 @@
                 "https://www.googleapis.com/auth/spreadsheets"
                 "https://www.googleapis.com/auth/spreadsheets.readonly"]
 
-        auth (auth/create ctx {:user user
-                               :provider :google
-                               :scopes scopes})
+        auth (auth/start ctx {:user user
+                              :provider :google
+                              :scopes scopes})
         login-url (:login-url auth)]
     (ui/page
      ctx
      [:h1 "Start authentication"]
      [:.flex
       [:a.btn {:href login-url} "Log in with Google"]])))
-
 
 ;; Get state + code
 ;; Continue auth workflow with the ID from the state
@@ -55,27 +48,19 @@
 
 (defn spreadsheet
   "Show a single spreadsheet"
-  [_]
+  [{:keys [gsheets/spreadsheet-id] :as ctx}]
   (ui/page
    nil
-   (let [spreadsheet-id "1vI2MXnZXTxOM-TEEmzIFx3z-ulz8wGZyO5Simj2vxHM"
-         result (sheets/spreadsheets-get spreadsheet-id)]
-     [:h1 "Welcome to your app!"]
-     [:pre
-      (json/generate-string result {:pretty true})])))
-
-(defn wrap-kyle [handler]
-  (fn [ctx]
-    (-> ctx
-        (with-testuser "kyle@unifica.ai")
-        handler)))
+   (let [result (sheets/spreadsheets-get spreadsheet-id)]
+     [:<>
+      [:h1 "Welcome to your app!"]
+      [:pre
+       (json/generate-string result {:pretty true})]])))
 
 (def module
-  {:routes [["" {:middleware [mid/wrap-redirect-signed-in]}
-             ["/" {:get {:handler home-page
-                         :middleware [wrap-kyle]}}]
+  {:routes [["" {:middleware [mid/wrap-kyle]}
+             ["/" {:get home-page}]
              ["/start" {:get start-auth}]
              ["/redirect" {:get finish-auth}]
-             ["/spreadsheet" {:get {:middleware [wrap-kyle
-                                                 mid/wrap-happyapi-request]
+             ["/spreadsheet" {:get {:middleware [mid/wrap-happyapi-request]
                                     :handler spreadsheet}}]]]})

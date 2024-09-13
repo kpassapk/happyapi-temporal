@@ -52,8 +52,8 @@
  ;; Uncomment this line if you have any ssh-related problems:
  ;; :biff.tasks/skip-ssh-agent true
 
- ;; HappyAPI
-
+ ;; ------------ HappyAPI ------------------
+ 
  :happyapi/config
  {:google {:deps            [:clj-http :cheshire]
            ;; At present, the library requires a run-server fn even though we don't want it to run a server
@@ -62,7 +62,10 @@
            :redirect_uri    "http://localhost:8080/redirect"
            :scopes          []
            :keywordize-keys true}}
+ ;; ------------ Google Sheets  ------------------
 
+ :gsheets/spreadsheet-id #biff/env "GSHEETS_SHEET_ID"
+ 
  ;; ------------ Temporal ------------------
 
   :temporal/target #or [#profile {:prod #biff/env "TEMPORAL_PROD_TARGET"
@@ -81,5 +84,5 @@
         :retry-options               {:maximum-attempts 1}
         :workflow-execution-timeout  #unifica/duration [1 :minutes]}}
 
-
- }
+ ;; HTTP
+ :http/debug true}

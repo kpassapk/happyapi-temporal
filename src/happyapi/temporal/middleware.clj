@@ -66,3 +66,14 @@
     (let [client (happyapi/make-client ctx :google)]
       (with-redefs [google/*api-request* client]
         (handler ctx)))))
+
+(defn with-testuser [{:keys [biff/db] :as ctx} email]
+  (let [userfn (fn [_] (biff/lookup-id db :user/email email))]
+    (assoc ctx :app/get-user-fn userfn)))
+
+(defn wrap-kyle [handler]
+  (fn [ctx]
+    (-> ctx
+        (with-testuser "kyle@unifica.ai")
+        handler)))
+
