@@ -78,18 +78,6 @@
         request-id (parse-uuid request-id)]
     (credentials/save ctx provider request-id args)))
 
-(defn- request->state
-  "Converts an auth request to an OAuth2 state string"
-  [request]
-  (str (:xt/id request)))
-
-(defn- state->request
-  "Converts an OAuth2 state string to an auth request"
-  [{:keys [biff/db app/get-user-fn] :as ctx} auth-state]
-  (let [request-id (parse-uuid auth-state)
-        user (get-user-fn ctx)]
-    (biff/lookup db :xt/id request-id :auth-request/user user)))
-
 ;; Creates a new authentication
 (defworkflow authentication [{:keys [state] :as wf-args}]
   ;; Use workflow arguments as initial workflow state
@@ -105,7 +93,7 @@
                           (throw+ {:type ::invalid-state
                                    :state state
                                    :expected expected
-                                   ::te/non-retryable true})))]
+                                   ::te/non-retriable true})))]
 
          (swap! wf-state merge result))))
 
@@ -121,20 +109,11 @@
 ;; list of scopes.
 (defn start [ctx {:keys [user provider scopes] :as params}]
   (if (u/valid? ctx ::create params)
-    (let [request-id (random-uuid)
-          request {:db/doc-type :auth-request
-                   :xt/id request-id
-                   :auth-request/user user
-                   :auth-request/provider provider
-                   :auth-request/scopes scopes}
-          
-          state (request->state request)
-          params (assoc params :state state)]
-
+    (let [id (str (random-uuid))
+          params (assoc params :state id)]
       (do
         ;; Persist auth request, then fire off workflow with the same ID
-        (biff/submit-tx ctx [request])
-        (workflow/trigger ctx authentication {:id request-id :params params})
+        (workflow/start ctx authentication {:id id :params params})
         {:login-url (get-link ctx params)}))
     (throw+ 
      {:type ::invalid-params
@@ -142,14 +121,11 @@
 
 (defn finish [ctx {:keys [code state] :as params}]
   (if (u/valid? ctx ::finish params)
-    (let [request (state->request ctx state)
-          id      (:xt/id request)]
-      @(-> (workflow/trigger ctx authentication
-                            {:id id
-                             :signal ::callback
-                             :signal-params {:code code
-                                             :state state}})
-          tc/get-result))
+    @(-> (workflow/start ctx authentication
+                           {:id state
+                            :signal ::callback
+                            :signal-params params})
+         tc/get-result)
     (throw+ {:type ::invalid-params
              :explain (u/explain ctx ::finish params)})))
 

@@ -16,11 +16,13 @@
    [temporal.activity :as a]
    [unifica.temporal :as temporal]
    [happyapi.setup :as happyapi]
-   [happyapi.oauth2.client :as oauth2])
+   [happyapi.oauth2.client :as oauth2]
+   [unifica.temporal.codec-server :as codec])
   (:gen-class))
 
 (def modules
   [home/module
+   codec/module
    schema/module
    auth/module])
 

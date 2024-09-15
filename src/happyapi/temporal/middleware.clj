@@ -1,10 +1,13 @@
 (ns happyapi.temporal.middleware
-  (:require [com.biffweb :as biff]
-            [muuntaja.middleware :as muuntaja]
-            [ring.middleware.anti-forgery :as csrf]
-            [ring.middleware.defaults :as rd]
-            [happyapi.temporal.client :as happyapi]
-            [happyapi.providers.google :as google]))
+  (:require
+   [com.biffweb :as biff]
+   [happyapi.providers.google :as google]
+   [happyapi.temporal.client :as happyapi]
+   [muuntaja.middleware :as muuntaja]
+   [ring.middleware.anti-forgery :as csrf]
+   [ring.middleware.cors :as cors]
+   [ring.middleware.defaults :as rd]
+   [unifica.temporal.codec-server :as codec]))
 
 (defn wrap-redirect-signed-in [handler]
   (fn [{:keys [session] :as ctx}]
@@ -47,10 +50,19 @@
                             (assoc :session false)
                             (assoc :static false)))))
 
+(defn wrap-codec-server-cors
+  [handler]
+  (-> handler
+      (cors/wrap-cors
+       :access-control-allow-origin (re-pattern "http://localhost:8233")
+       :access-control-allow-headers [:content-type :x-namespace]
+       :access-control-allow-methods [:post :get])))
+
 (defn wrap-api-defaults [handler]
   (-> handler
       muuntaja/wrap-params
       muuntaja/wrap-format
+      codec/wrap-cors
       (rd/wrap-defaults rd/api-defaults)))
 
 (defn wrap-base-defaults [handler]
@@ -76,4 +88,3 @@
     (-> ctx
         (with-testuser "kyle@unifica.ai")
         handler)))
-

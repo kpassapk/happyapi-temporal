@@ -14,8 +14,9 @@
         io.github.timothypratley/happyapi {:git/url "https://github.com/timothypratley/happyapi"
                                            :git/sha "8ee2e88d1ad23b7222063309cf9077749e57f969"}
  
-        ai.unifica/temporal {:git/url "git@github.com-unifica-components:unifica-ai/components.git"
-                             :git/sha "fc046a35af51f99a6c7863bd1355887b175235b9"
+        ai.unifica/temporal {;; :local/root "/Users/kyle/src/github.com/unifica-ai/components/temporal"
+                             :git/url "git@github.com-unifica-components:unifica-ai/components.git"
+                             :git/sha "73db8c66be558b9395efbe41f3c44095be4ff957"
                              :deps/root "temporal"}
 
         clojure.java-time/clojure.java-time {:mvn/version "1.4.2"}}

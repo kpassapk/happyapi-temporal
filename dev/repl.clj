@@ -1,12 +1,15 @@
 (ns repl
   (:require
+   [taoensso.nippy :as nippy]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [com.biffweb :as biff :refer [q]]
    [happyapi.temporal :as main]
    [happyapi.temporal.middleware :as mid]
    [happyapi.temporal.sheets-v4 :as sheets]
-   [happyapi.temporal.workflows.auth :as auth]))
+   [happyapi.temporal.workflows.auth :as auth]
+   [clj-http.client :as client]
+   [cheshire.core :as json]))
 
 ;; REPL-driven development
 ;; ----------------------------------------------------------------------------------------
@@ -62,7 +65,7 @@
   ;; main/components, :tasks, :queues, config.env, or deps.edn.
   (main/refresh)
 
-  ;; Get all auth requests for app user
+  ;; get all auth requests for app user
   (let [{:keys [biff/db app/get-user-fn] :as ctx} ((mid/wrap-kyle identity) (get-context))
         user (get-user-fn ctx)]
     (q db
@@ -151,4 +154,22 @@
   (let [ctx (assoc (get-context) :temporal.activity/get-info (constantly {:workflow-id "38587950-f771-45e2-abaf-e758446fde2d"}))]
     (auth/persist-auth ctx state))
 
+  (def data "TlBZAHAKagZzY29wZXNuBWklaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vYXV0aC9kcml2ZWkqaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vYXV0aC9kcml2ZS5maWxlaS5odHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9hdXRoL2RyaXZlLnJlYWRvbmx5aSxodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9hdXRoL3NwcmVhZHNoZWV0c2k1aHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vYXV0aC9zcHJlYWRzaGVldHMucmVhZG9ubHlqCmV4cGlyZXNfYXRaAAABke4fittqDGFjY2Vzc190b2tlbhAA3nlhMjkuYTBBY002MTJ4UHA0SmhydkV5Z05GZHBvam54aDVsZEp2OG0tWHNhYnAzanVJcTVmTjhLc1lNWUlhWVE3bG9yWFFoTGZmNThzUGk1YnZiOWRoTW1GZllNX0FLYnlFOEdqUTBycFEzWENPckxtOEJob0dmQk9HU2poX3l0b1dDVmliNkZ2dU1DbmZpOU1VN21VVU1mM1k2R282ZmhlMm4wUWdkV0pUX0Q2aUxhQ2dZS0FmNFNBUk1TRlFIR1gyTWk3dEh0MnJaMk1VblhkVDdYNGMtaEhRMDE3NWoNcmVmcmVzaF90b2tlbmlnMS8vMGh4RlN1WXhPSm1BOENnWUlBUkFBR0JFU053Ri1MOUlydktSM0ZOd1dtLVFqUjJ6VEEyZHFRNkh3V01weUNQOHVYWWV4U1ZZMldGSmF0TktMaTFOWmxrcFF3UzZoU3hwczh5RWoFc3RhdGVpJDc4Y2FkZTllLTA4NjQtNDA0Zi05MTJkLTQ2MGU4OTdjMjJmZGoFc2NvcGUQAOJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9hdXRoL3NwcmVhZHNoZWV0cy5yZWFkb25seSBodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9hdXRoL2RyaXZlLnJlYWRvbmx5IGh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL2F1dGgvZHJpdmUgaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vYXV0aC9kcml2ZS5maWxlIGh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL2F1dGgvc3ByZWFkc2hlZXRzagp0b2tlbl90eXBlaQZCZWFyZXJqCmV4cGlyZXNfaW4qAAAOD2oIcHJvdmlkZXJqBmdvb2dsZWoEdXNlcltyJJfTNThKU43Iw+DziICX")
+  
+  (def payload
+    {:payloads 
+     [{:metadata
+       {:encoding "YmluYXJ5L3BsYWlu", :encodingDecoded "binary/plain"},
+       :data data}]})
+
+  (client/post "http://localhost:8080/codec/decode"
+               {:content-type :json
+                :as :json
+                :accept :json
+                :body (json/encode payload)
+                :headers {"origin" "http://localhost:8233"
+                          "access-control-request-method" "POST"}})
+
+  (add-tap (fn [v] (def v* v)))
+  
   )

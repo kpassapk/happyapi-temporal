@@ -18,23 +18,45 @@ organized way.
 Authentications flows are callback-driven, which can result in a lot
 of logic in the handlers.
 
-Web applications need a more explicit handling of the redirects flow and handlers.
-
-Most application [architectures][hexagonal] would recommend this kind
-of separation to make code more portable and testable.
+Most Web application [architectures][hexagonal] would recommend strict separation 
+between handler code and domain logic to result in more portable and testable code.
 
 [hexagonal]: https://en.wikipedia.org/wiki/Hexagonal_architecture_(software)
 
 HappyAPI provides a middleware stack that starts a web server. This is
-appropriate for desktop applications and tools. 
+appropriate for desktop applications and tools, and works out of the box.
 
 HappyAPI provides an async variant of middleware that can be used with
-servers such as netty, [X] and [Y], but the authentication flow itself
-is still syncrhonous.
+servers such as netty, but the authentication flow itself is still
+syncrhonous.
 
-Temporal is a workflow orchestration tool to run long-running
-workflows. It provides a friendly user interface and
-developer-friendly SDKs for many languages.
+## OAuth2 flow
+
+In this project, we implement an authentication workflow in Tepmoral
+to model the authenticaiton workflow. The workflow is as follows:
+
+1. Create OAuth2 state string
+2. In handler, construct a login URL with the state string
+
+User clicks the login link, and Google redirects back with authentication code and state
+
+3. If state is the same as the original state string, exchange authentication code for a token.
+
+4. Store the token to a database.
+
+It is not hard to implement this flow with a database. However
+
+- You don't have a single function that looks like steps 1-4 above.
+- You may end up with database models for this work-in-progress, which are not significant
+to the application in any other way
+- You will have to store timestamps and check 
+
+In this project we use Temporal to implement the authorization Oauth2 code for HappyAPI.
+
+## Temporal
+
+Temporal is a workflow orchestration tool to run long-running workflows. It provides a friendly user
+interface and developer-friendly SDKs for many languages.
 
 This application allows the user to connect efficiently to a Google Sheet.
 
