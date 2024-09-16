@@ -4,19 +4,17 @@
    [clojure.tools.logging :as log]
    [clojure.tools.namespace.repl :as tn-repl]
    [com.biffweb :as biff]
-   [happyapi.temporal.config :as config]
+   [happyapi.setup :as happyapi]
    [happyapi.temporal.home :as home]
    [happyapi.temporal.middleware :as mid]
    [happyapi.temporal.schema :as schema]
-   [happyapi.temporal.workflows.auth :as auth]
    [happyapi.temporal.ui :as ui]
+   [happyapi.temporal.workflows.auth :as auth]
    [malli.core :as malc]
    [malli.registry :as malr]
    [nrepl.cmdline :as nrepl-cmd]
    [temporal.activity :as a]
    [unifica.temporal :as temporal]
-   [happyapi.setup :as happyapi]
-   [happyapi.oauth2.client :as oauth2]
    [unifica.temporal.codec-server :as codec])
   (:gen-class))
 
@@ -52,22 +50,13 @@
               malc/default-registry
               (apply biff/safe-merge (keep :schema modules)))})
 
-;; Load happyapi config
 (defn use-happyapi-config
   "Expand happyapi configuration"
   [{:keys [happyapi/config] :as ctx}]
-  (let [expand (fn [provider cfg]
-                 [provider (-> cfg
-                               (update :provider #(or % provider))
-                               happyapi/with-deps
-                               happyapi/resolve-fns
-                               oauth2/with-endpoints)])
-        provider-cofigs (->> (for [provider-config config]
-                               (->> provider-config
-                                   (apply expand)
-                                   (apply config/verify-happyapi-config)))
-                             (into {}))]
-    (assoc ctx :happyapi/config provider-cofigs)))
+  (let [config (->> (for [[provider] config]
+                      [provider (happyapi/prepare-config provider config)])
+                    (into {}))]
+    (assoc ctx :happyapi/config config)))
 
 (defn- get-user-fn [{:keys [session]}]
   (:uid session))

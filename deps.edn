@@ -1,5 +1,6 @@
 {:paths ["src" "resources" "target/resources"]
- :deps {com.biffweb/biff                    #:git{:url "https://github.com/jacobobryant/biff", :sha "75fd9d7", :tag "v1.8.20"}
+ :deps {com.biffweb/biff                    #:git{:url "https://github.com/jacobobryant/biff", :sha "75fd9d7", :tag "v1.8.20"
+                                                  :exclusions [cider/cider-nrepl]}
         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
         metosin/muuntaja                    {:mvn/version "0.6.8"}
         ring/ring-defaults                  {:mvn/version "0.3.4"}
@@ -11,15 +12,16 @@
         org.slf4j/jul-to-slf4j     {:mvn/version "1.7.36"}
         org.slf4j/jcl-over-slf4j   {:mvn/version "1.7.36"}
 
-        io.github.timothypratley/happyapi {:git/url "https://github.com/timothypratley/happyapi"
-                                           :git/sha "8ee2e88d1ad23b7222063309cf9077749e57f969"}
+        io.github.timothypratley/happyapi {:git/url "https://github.com/unifica-ai/happyapi"
+                                           :git/sha "dcd6fd41afb345ee8042d19d6819a6dea5b585e3"}
  
         ai.unifica/temporal {;; :local/root "/Users/kyle/src/github.com/unifica-ai/components/temporal"
                              :git/url "git@github.com-unifica-components:unifica-ai/components.git"
                              :git/sha "73db8c66be558b9395efbe41f3c44095be4ff957"
                              :deps/root "temporal"}
 
-        clojure.java-time/clojure.java-time {:mvn/version "1.4.2"}}
+        clojure.java-time/clojure.java-time {:mvn/version "1.4.2"}
+        cider/cider-nrepl {:mvn/version "0.50.2"}}
  :aliases
  {:dev {:extra-deps {com.biffweb/tasks {:git/url "https://github.com/jacobobryant/biff", :git/sha "75fd9d7", :git/tag "v1.8.20", :deps/root "libs/tasks"}
                      vvvvalvalval/scope-capture {:mvn/version "0.3.3"}}

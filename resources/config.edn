@@ -56,7 +56,6 @@
  
  :happyapi/config
  {:google {:deps            [:clj-http :cheshire]
-           ;; At present, the library requires a run-server fn even though we don't want it to run a server
            :client_id       #biff/env HAPPYAPI_GOOGLE_CLIENT_ID
            :client_secret   #biff/env HAPPYAPI_GOOGLE_SECRET
            :redirect_uri    "http://localhost:8080/redirect"
