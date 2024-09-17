@@ -5,7 +5,8 @@
    [happyapi.temporal.middleware :as mid]
    [happyapi.temporal.ui :as ui]
    [happyapi.temporal.workflows.auth :as auth]
-   [happyapi.temporal.sheets-v4 :as sheets]))
+   [happyapi.temporal.sheets-v4 :as sheets]
+   [happyapi.providers.google :as google]))
 
 (defn home-page [{:keys [biff/db app/get-user-fn] :as ctx}]
   (let [user (get-user-fn ctx)
@@ -20,14 +21,10 @@
         [:a.link {:href "/start"} "Start authentication"])])))
 
 (defn start-auth [{:keys [biff/db] :as ctx}]
-  (let [user (biff/lookup-id db :user/email "kyle@unifica.ai") ;; TODO replace with session
-
-        scopes ["https://www.googleapis.com/auth/drive"
-                "https://www.googleapis.com/auth/drive.file"
-                "https://www.googleapis.com/auth/drive.readonly"
-                "https://www.googleapis.com/auth/spreadsheets"
-                "https://www.googleapis.com/auth/spreadsheets.readonly"]
-
+  (let [args (sheets/spreadsheets-get nil) ;; hacky
+        scopes (:scopes args)
+        user (biff/lookup-id db :user/email "kyle@unifica.ai")
+        
         auth (auth/start ctx {:user user
                               :provider :google
                               :scopes scopes})
@@ -51,7 +48,8 @@
   [{:keys [gsheets/spreadsheet-id] :as ctx}]
   (ui/page
    nil
-   (let [result (sheets/spreadsheets-get spreadsheet-id)]
+   (let [args   (sheets/spreadsheets-get spreadsheet-id)
+         result (google/*api-request* args)] ;
      [:<>
       [:h1 "Welcome to your app!"]
       [:pre

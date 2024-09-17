@@ -33,7 +33,6 @@
               :expires_at]]
     (biff/submit-tx ctx [(-> credentials
                              (select-keys keys)
-                             (assoc :request request-id
-                                    :created_at :db/now)
+                             (assoc :created_at :db/now)
                              (ns-keys "auth")
                              (assoc :db/doc-type :auth))])))
